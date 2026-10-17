@@ -1,9 +1,35 @@
 (() => {
   const $ = (id) => document.getElementById(id);
   const screens = ['start', 'lobby', 'place', 'game'];
-  const show = (name) => screens.forEach((s) => ($('screen-' + s).hidden = s !== name));
+  const show = (name) => {
+    screens.forEach((s) => ($('screen-' + s).hidden = s !== name));
+    $('theme-switch').hidden = name !== 'start';
+  };
   const ownEl = $('own-board'), oppEl = $('opp-board');
-  let ws, myTurn = false, active = false, myShips = [], myName = 'Kapitän', cfg = Rules.getConfig('normal');
+  let ws, myTurn = false, active = false, myShips = [], myName = 'Kapitän', cfg = Rules.getConfig('normal', 'classic');
+
+  const TXT = {
+    classic: { place: 'Platziere deine Flotte', win: '🎉 Du hast gewonnen!', lose: '💥 Du hast verloren.', title: 'Schiffe versenken', themeName: 'Klassisch', defaultName: 'Kapitän' },
+    space: { place: 'Platziere deine Objekte im Weltraum', win: '🎉 Du hast gewonnen – alle Objekte zerstört!', lose: '💥 Du hast verloren – dein Sektor ist leer.', title: 'Weltraum-Schlacht', themeName: 'Weltraum', defaultName: 'Astronaut' },
+  };
+  let theme = 'classic';
+
+  function applyTheme(t) {
+    theme = t;
+    document.body.classList.toggle('theme-space', t === 'space');
+    document.body.classList.toggle('theme-classic', t === 'classic');
+    for (const el of document.querySelectorAll('[data-classic]')) el.textContent = el.dataset[t];
+    document.title = TXT[t].title;
+    $('name').placeholder = TXT[t].defaultName;
+    $('favicon').href = t === 'space' ? 'rocket.png' : 'ship.png';
+    $('theme-switch').setAttribute('aria-checked', t === 'space');
+  }
+
+  // Konfiguration + Theme aus einer Server-Nachricht übernehmen
+  function useConfig(m) {
+    cfg = Rules.getConfig(m.mode, m.theme);
+    applyTheme(cfg.theme);
+  }
 
   const store = {
     get() { try { return JSON.parse(sessionStorage.getItem('sv') || 'null'); } catch { return null; } },
@@ -27,7 +53,7 @@
   function enterPlacing() {
     Placement.setConfig(cfg);
     $('btn-ready').disabled = true;
-    $('place-info').textContent = 'Platziere deine Flotte';
+    $('place-info').textContent = TXT[theme].place;
     show('place');
   }
 
@@ -70,16 +96,16 @@
   function handle(m) {
     switch (m.type) {
       case 'created':
-        cfg = Rules.getConfig(m.mode);
-        $('mode-label').textContent = `Spielfeld: ${cfg.label}`;
+        useConfig(m);
+        $('mode-label').textContent = `${TXT[theme].themeName} · ${cfg.label}`;
         store.set({ code: m.code, playerId: m.playerId });
         $('room-code').textContent = m.code;
         $('link').value = `${location.origin}/?room=${m.code}`;
         show('lobby'); break;
       case 'joined':
-        cfg = Rules.getConfig(m.mode);
+        useConfig(m);
         store.set({ code: m.code, playerId: m.playerId });
-        toast(`Beigetreten – Gegner: ${m.opponent} (${cfg.label})`);
+        toast(`Beigetreten – Gegner: ${m.opponent} (${TXT[theme].themeName} · ${cfg.label})`);
         $('opp-title').textContent = m.opponent;
         enterPlacing(); break;
       case 'opponent_joined':
@@ -94,12 +120,12 @@
       case 'shot': onShot(m); break;
       case 'game_over': {
         active = false; oppEl.classList.remove('target');
-        $('status').textContent = m.winner === 'you' ? '🎉 Du hast gewonnen!' : '💥 Du hast verloren.';
+        $('status').textContent = m.winner === 'you' ? TXT[theme].win : TXT[theme].lose;
         if (m.winner !== 'you') {
           // reveal opponent's remaining ships on the right board
-          for (const s of m.opponentShips) for (const c of Rules.cellsOf(s)) {
+          for (const s of m.opponentShips) for (const c of s.cells) {
             const e = Board.cell(oppEl, c.x, c.y);
-            if (!e.classList.contains('hit')) e.classList.add('ship');
+            if (!e.classList.contains('hit')) e.classList.add('ship', `k${Rules.tierOf(s)}`);
           }
         }
         $('over').hidden = false; $('btn-rematch').disabled = false; break;
@@ -109,7 +135,7 @@
       case 'opponent_left': toast('Gegner hat die Verbindung verloren – warte …'); break;
       case 'opponent_back': toast('Gegner ist zurück'); break;
       case 'resumed':
-        cfg = Rules.getConfig(m.mode);
+        useConfig(m);
         if (m.phase === 'game' || m.phase === 'playing') {
           toast('Verbindung wiederhergestellt – Spielstand kann nicht geladen werden, bitte neues Spiel starten.');
           leave();
@@ -128,7 +154,9 @@
     show('start');
   }
 
-  const name = () => (myName = $('name').value.trim() || 'Kapitän');
+  $('theme-switch').onclick = () => applyTheme(theme === 'space' ? 'classic' : 'space');
+
+  const name = () => (myName = $('name').value.trim() || TXT[theme].defaultName);
   const chosen = (id) => { const b = $(id).querySelector('button.active'); return b ? b.dataset.value : null; };
   const selectedMode = () => (chosen('size') === 'large' ? chosen('difficulty') : chosen('size'));
   for (const group of document.querySelectorAll('.choice')) {
@@ -145,7 +173,7 @@
   $('btn-create').onclick = () => {
     const mode = selectedMode();
     if (!mode) return toast(chosen('size') ? 'Bitte Schwierigkeit wählen' : 'Bitte Spielfeld wählen');
-    connect(() => send({ type: 'create', name: name(), mode }));
+    connect(() => send({ type: 'create', name: name(), mode, theme }));
   };
   $('btn-join').onclick = () => {
     const code = $('code').value.trim().toUpperCase();
@@ -156,9 +184,28 @@
   $('btn-ready').onclick = () => { if (Placement.isComplete()) send({ type: 'place', ships: Placement.ships() }); };
   $('btn-rematch').onclick = () => { send({ type: 'rematch' }); $('btn-rematch').disabled = true; $('status').textContent = 'Warte auf Revanche-Zusage …'; };
   $('btn-leave').onclick = leave;
+  $('btn-cancel').onclick = () => { send({ type: 'leave' }); leave(); };
+
+  // Raum-Code → Variante des Raums anzeigen (Theme wechselt passend mit)
+  async function lookupRoom() {
+    const code = $('code').value.trim().toUpperCase();
+    const info = $('room-info');
+    if (code.length !== 6) { info.hidden = true; return; }
+    try {
+      const r = await fetch(`/api/room/${encodeURIComponent(code)}`);
+      if ($('code').value.trim().toUpperCase() !== code) return; // inzwischen geändert
+      if (!r.ok) { info.textContent = 'Raum nicht gefunden'; info.hidden = false; return; }
+      const d = await r.json();
+      applyTheme(d.theme);
+      info.textContent = `${TXT[d.theme].themeName} · ${d.label}${d.full ? ' (voll)' : ''}`;
+      info.hidden = false;
+    } catch { info.hidden = true; }
+  }
+  $('code').addEventListener('input', lookupRoom);
 
   const room = new URLSearchParams(location.search).get('room');
-  if (room) $('code').value = room.toUpperCase();
+  if (room) { $('code').value = room.toUpperCase(); }
+  applyTheme('classic');
   if (store.get()) resume();
-  else show('start');
+  else { show('start'); lookupRoom(); }
 })();

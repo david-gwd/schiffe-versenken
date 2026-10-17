@@ -9,21 +9,14 @@ const Placement = (() => {
   const full = (i) => cells[i].length === FLEET[i].len;
   const nextOpen = () => cells.findIndex((c, i) => !full(i));
   const owner = (x, y) => cells.findIndex((c) => c.some((p) => p.x === x && p.y === y));
-  // Felder anderer Schiffe als 1er-Schiffe, damit Rules.canPlace Überlappung/Berührung prüft
-  const obstacles = (skip) => cells.flatMap((c, i) => (i === skip ? [] : c.map((p) => ({ x: p.x, y: p.y, len: 1, dir: 'h' }))));
+  // Felder anderer Objekte als 1-Feld-Objekte (mit ihrer Form-Art für den Mindestabstand)
+  const obstacles = (skip) => cells.flatMap((c, i) => (i === skip ? [] : c.map((p) => ({ kind: FLEET[i].kind, cells: [p] }))));
+  const has = (list, p) => list.some((c) => c.x === p.x && c.y === p.y);
 
-  // Lässt sich das Schiff i mit diesen Feldern noch gültig fertig bauen?
+  // Lässt sich Objekt i mit diesen Feldern noch gültig fertig bauen?
   function feasible(i, list) {
-    const len = FLEET[i].len, others = obstacles(i);
-    const xs = list.map((p) => p.x), ys = list.map((p) => p.y);
-    const minx = Math.min(...xs), maxx = Math.max(...xs), miny = Math.min(...ys), maxy = Math.max(...ys);
-    if (miny === maxy && maxx - minx < len) {
-      for (let sx = maxx - len + 1; sx <= minx; sx++) if (Rules.canPlace({ x: sx, y: miny, len, dir: 'h' }, others, N)) return true;
-    }
-    if (minx === maxx && maxy - miny < len) {
-      for (let sy = maxy - len + 1; sy <= miny; sy++) if (Rules.canPlace({ x: minx, y: sy, len, dir: 'v' }, others, N)) return true;
-    }
-    return false;
+    const f = FLEET[i], others = obstacles(i);
+    return Rules.placements(f.kind, f.len, N).some((pl) => list.every((p) => has(pl.cells, p)) && Rules.canPlace(pl, others, N));
   }
 
   function canAdd(i, x, y) {
@@ -33,12 +26,15 @@ const Placement = (() => {
     return feasible(i, [...c, { x, y }]);
   }
 
-  function isEnd(i, x, y) {
-    const c = cells[i];
-    if (c.length <= 2) return true;
-    const key = c[0].x === c[1].x ? 'y' : 'x';
-    const v = key === 'x' ? x : y, vals = c.map((p) => p[key]);
-    return v === Math.min(...vals) || v === Math.max(...vals);
+  // Hängen die Felder (waagerecht/senkrecht) zusammen?
+  function connected(list) {
+    if (list.length < 2) return true;
+    const seen = [list[0]], queue = [list[0]];
+    while (queue.length) {
+      const cur = queue.pop();
+      for (const p of list) if (!has(seen, p) && Math.abs(p.x - cur.x) + Math.abs(p.y - cur.y) === 1) { seen.push(p); queue.push(p); }
+    }
+    return seen.length === list.length;
   }
 
   function renderList() {
@@ -55,18 +51,21 @@ const Placement = (() => {
   }
 
   function redraw() {
-    Board.clear(boardEl, 'ship', 'partial', 'hint', 'preview-ok', 'preview-bad');
+    Board.clear(boardEl, 'ship', 'k2', 'k3', 'k4', 'k5', 'partial', 'hint', 'preview-ok', 'preview-bad');
     cells.forEach((c, i) => c.forEach((p) => {
       const e = Board.cell(boardEl, p.x, p.y);
-      e.classList.add('ship');
+      e.classList.add('ship', `k${FLEET[i].tier}`);
       if (i === current && !full(i)) e.classList.add('partial');
     }));
-    if (current >= 0 && cells[current].length) {
-      for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (canAdd(current, x, y)) Board.cell(boardEl, x, y).classList.add('hint');
+    if (current >= 0) {
+      for (const p of cells[current]) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const x = p.x + dx, y = p.y + dy;
+        if (Rules.inBounds(x, y, N) && canAdd(current, x, y)) Board.cell(boardEl, x, y).classList.add('hint');
+      }
     }
     renderList();
-    infoEl.textContent = current < 0 ? 'Flotte komplett – drücke „Fertig“'
-      : `${FLEET[current].name}: Feld für Feld anklicken (${cells[current].length}/${FLEET[current].len})`;
+    infoEl.textContent = current < 0 ? 'Alles platziert – drücke „Fertig“'
+      : `${FLEET[current].name} (${FLEET[current].desc}): Feld für Feld anklicken – ${cells[current].length}/${FLEET[current].len}`;
   }
 
   function preview(x, y) {
@@ -79,7 +78,8 @@ const Placement = (() => {
     const o = owner(x, y);
     if (o >= 0 && o !== current) { current = o; return redraw(); }       // anderes Schiff auswählen
     if (o === current) {                                                  // eigenes Feld: abbauen
-      cells[o] = isEnd(o, x, y) ? cells[o].filter((p) => !(p.x === x && p.y === y)) : [];
+      const rest = cells[o].filter((p) => !(p.x === x && p.y === y));
+      cells[o] = connected(rest) ? rest : [];
       return redraw();
     }
     if (!canAdd(current, x, y)) return;
@@ -96,17 +96,13 @@ const Placement = (() => {
   }
 
   function random() {
-    const pool = [...Rules.randomPlacement(cfg)];
-    cells = FLEET.map((f) => Rules.cellsOf(pool.splice(pool.findIndex((s) => s.len === f.len), 1)[0]));
+    cells = Rules.randomPlacement(cfg).map((o) => o.cells); // gleiche Reihenfolge wie FLEET
     current = -1;
     redraw();
   }
 
   function ships() {
-    return cells.filter((c, i) => c.length === FLEET[i].len).map((c) => {
-      const x = Math.min(...c.map((p) => p.x)), y = Math.min(...c.map((p) => p.y));
-      return { x, y, len: c.length, dir: c.every((p) => p.y === c[0].y) ? 'h' : 'v' };
-    });
+    return cells.map((c, i) => ({ kind: FLEET[i].kind, cells: c.map(({ x, y }) => ({ x, y })) })).filter((o, i) => full(i));
   }
 
   function setConfig(c) {

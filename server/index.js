@@ -6,6 +6,12 @@ const R = require('./rooms');
 const { Rules } = R;
 
 const app = express();
+// Variante eines Raums nachschlagen, damit die Startseite beim Link-Aufruf schon passend aussieht
+app.get('/api/room/:code', (req, res) => {
+  const room = R.getRoom(req.params.code);
+  if (!room) return res.status(404).json({ error: 'not_found' });
+  res.json({ mode: room.cfg.mode, theme: room.cfg.theme, label: room.cfg.label, full: room.players.length >= 2 });
+});
 app.use('/shared', express.static(path.join(__dirname, '..', 'shared')));
 app.use(express.static(path.join(__dirname, '..', 'public')));
 const server = http.createServer(app);
@@ -38,16 +44,16 @@ wss.on('connection', (ws) => {
     if (!m || typeof m.type !== 'string') return;
 
     if (m.type === 'create' && !room) {
-      const r = R.createRoom(m.name, m.mode);
+      const r = R.createRoom(m.name, m.mode, m.theme);
       attach(r.room, r.player);
-      return send(player, { type: 'created', code: room.code, playerId: player.id, mode: room.cfg.mode });
+      return send(player, { type: 'created', code: room.code, playerId: player.id, mode: room.cfg.mode, theme: room.cfg.theme });
     }
     if (m.type === 'join' && !room) {
       const r = R.joinRoom(m.code, m.name);
       if (r.error) return ws.send(JSON.stringify({ type: 'error', msg: r.error }));
       attach(r.room, r.player);
       const opp = R.opponentOf(room, player);
-      send(player, { type: 'joined', code: room.code, playerId: player.id, opponent: opp.name, mode: room.cfg.mode });
+      send(player, { type: 'joined', code: room.code, playerId: player.id, opponent: opp.name, mode: room.cfg.mode, theme: room.cfg.theme });
       return send(opp, { type: 'opponent_joined', name: player.name });
     }
     if (m.type === 'resume' && !room) {
@@ -55,11 +61,14 @@ wss.on('connection', (ws) => {
       if (!found) return ws.send(JSON.stringify({ type: 'resume_failed' }));
       attach(found.room, found.player);
       const opp = R.opponentOf(room, player);
-      send(player, { type: 'resumed', code: room.code, mode: room.cfg.mode, phase: room.phase, opponent: opp && opp.name, yourTurn: room.players[room.turn] === player, placed: player.ready });
+      send(player, { type: 'resumed', code: room.code, mode: room.cfg.mode, theme: room.cfg.theme, phase: room.phase, opponent: opp && opp.name, yourTurn: room.players[room.turn] === player, placed: player.ready });
       return send(opp, { type: 'opponent_back' });
     }
     if (!room) return;
     const opp = R.opponentOf(room, player);
+
+    // Wartenden Raum abbrechen: Code sofort ungültig machen
+    if (m.type === 'leave' && !opp) { R.removeRoom(room); room = null; player = null; return; }
 
     if (m.type === 'place' && room.phase === 'placing' && !player.ready) {
       if (!Rules.validatePlacement(m.ships, room.cfg)) return send(player, { type: 'error', msg: 'Ungültige Platzierung' });
@@ -80,8 +89,8 @@ wss.on('connection', (ws) => {
       for (const p of room.players) send(p, { ...base, by: p === player ? 'you' : 'opponent', yourTurn: room.players[room.turn] === p });
       if (res.allSunk) {
         room.phase = 'over';
-        send(player, { type: 'game_over', winner: 'you', opponentShips: opp.board.ships.map(({ x, y, len, dir }) => ({ x, y, len, dir })) });
-        send(opp, { type: 'game_over', winner: 'opponent', opponentShips: player.board.ships.map(({ x, y, len, dir }) => ({ x, y, len, dir })) });
+        send(player, { type: 'game_over', winner: 'you', opponentShips: opp.board.ships.map(({ kind, cells }) => ({ kind, cells })) });
+        send(opp, { type: 'game_over', winner: 'opponent', opponentShips: player.board.ships.map(({ kind, cells }) => ({ kind, cells })) });
       }
       return;
     }

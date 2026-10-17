@@ -7,15 +7,21 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+  <link rel="icon" id="favicon" type="image/png" href="ship.png">
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="theme-classic">
   <header>
+    <button id="theme-switch" type="button" role="switch" aria-checked="false" aria-label="Weltraum-Version">
+      <span class="knob"></span>
+      <span class="opt opt-classic"><b>⚓</b>KLASSISCH</span>
+      <span class="opt opt-space"><b>🚀</b>WELTRAUM</span>
+    </button>
     <div class="logo">
-      <span class="o">SCHIFFE</span>
-      <span class="t">VERSENKEN</span>
+      <span class="o" data-classic="SCHIFFE" data-space="WELTRAUM">SCHIFFE</span>
+      <span class="t" data-classic="VERSENKEN" data-space="SCHLACHT">VERSENKEN</span>
     </div>
-    <p class="tagline">Old school vibes. Online gegeneinander.</p>
+    <p class="tagline" data-classic="Old school vibes. Online gegeneinander." data-space="Zerstöre die Objekte deines Gegners.">Old school vibes. Online gegeneinander.</p>
   </header>
 
   <main>
@@ -33,21 +39,22 @@
           </div>
           <div class="field" id="difficulty-row" hidden>Schwierigkeit
             <div class="choice" id="difficulty" role="radiogroup" aria-label="Schwierigkeit">
-              <button type="button" role="radio" data-value="large">Schwer<small>mehr Schiffe</small></button>
-              <button type="button" role="radio" data-value="expert">Experte<small>gleiche Schiffszahl</small></button>
+              <button type="button" role="radio" data-value="large">Schwer<small data-classic="mehr Schiffe" data-space="mehr Objekte">mehr Schiffe</small></button>
+              <button type="button" role="radio" data-value="expert">Experte<small data-classic="gleiche Schiffszahl" data-space="gleiche Objektzahl">gleiche Schiffszahl</small></button>
             </div>
           </div>
           <button id="btn-create" class="primary">+ Neues Spiel erstellen</button>
           <div class="or">— oder —</div>
           <label>Raum-Code <input id="code" maxlength="6" placeholder="ABC123" autocomplete="off"></label>
           <button id="btn-join">Beitreten</button>
+          <p class="muted" id="room-info" hidden></p>
         </div>
       </div>
     </section>
 
     <section id="screen-lobby" class="screen" hidden>
       <div class="win narrow">
-        <div class="titlebar"><span>LOBBY.EXE</span><i></i></div>
+        <div class="titlebar"><span>LOBBY.EXE</span><button id="btn-cancel" class="close" type="button" aria-label="Abbrechen" title="Abbrechen">x</button></div>
         <div class="body">
           <p>Schicke diesen Link an deinen Mitspieler:</p>
           <input id="link" readonly>
@@ -63,13 +70,13 @@
       <p id="place-info" class="status">Platziere deine Flotte</p>
       <div class="place-layout">
         <div class="win fit">
-          <div class="titlebar"><span>FLOTTE.DAT</span><i></i></div>
+          <div class="titlebar"><span data-classic="FLOTTE.DAT" data-space="SEKTOR.DAT">FLOTTE.DAT</span><i></i></div>
           <div class="body"><div id="place-board" class="board"></div></div>
         </div>
         <div class="win narrow">
-          <div class="titlebar"><span>WERFT.EXE</span><i></i></div>
+          <div class="titlebar"><span data-classic="WERFT.EXE" data-space="OBJEKTE.EXE">WERFT.EXE</span><i></i></div>
           <div class="body">
-            <p class="muted">Schiff wählen, dann Feld für Feld anklicken. Eigene Felder anklicken zum Entfernen.</p>
+            <p class="muted" data-classic="Schiff wählen, dann Feld für Feld anklicken. Eigene Felder anklicken zum Entfernen." data-space="Objekt wählen, dann Feld für Feld anklicken. Eigene Felder anklicken zum Entfernen.">Schiff wählen, dann Feld für Feld anklicken. Eigene Felder anklicken zum Entfernen.</p>
             <ul id="fleet-list"></ul>
             <button id="btn-random">Zufällig</button>
             <button id="btn-reset">Zurücksetzen</button>
@@ -83,7 +90,7 @@
       <p id="status" class="status"></p>
       <div class="boards">
         <div class="win fit">
-          <div class="titlebar"><span id="own-title">DEINE_FLOTTE</span><i></i></div>
+          <div class="titlebar"><span id="own-title" data-classic="DEINE_FLOTTE" data-space="DEIN_SEKTOR">DEINE_FLOTTE</span><i></i></div>
           <div class="body"><div id="own-board" class="board"></div></div>
         </div>
         <div class="win fit">
@@ -92,7 +99,7 @@
         </div>
       </div>
       <div id="over" class="win narrow" hidden>
-        <div class="titlebar"><span>SPIEL_VORBEI.EXE</span><i></i></div>
+        <div class="titlebar"><span data-classic="SPIEL_VORBEI.EXE" data-space="MISSION_ENDE.EXE">SPIEL_VORBEI.EXE</span><i></i></div>
         <div class="body">
           <button id="btn-rematch" class="primary">Revanche</button>
           <button id="btn-leave">Neues Spiel</button>
@@ -101,7 +108,7 @@
     </section>
   </main>
 
-  <footer>© 1999–2026 SCHIFFE VERSENKEN • MADE WITH <b>♥</b> AND PIXELS</footer>
+  <footer>© 1999–2026 <span data-classic="SCHIFFE VERSENKEN" data-space="WELTRAUM-SCHLACHT">SCHIFFE VERSENKEN</span> • MADE WITH <b>♥</b> AND PIXELS</footer>
   <div id="toast" hidden></div>
   <script src="/shared/rules.js"></script>
   <script src="js/board.js"></script>

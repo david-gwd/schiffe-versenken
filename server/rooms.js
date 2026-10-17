@@ -17,9 +17,9 @@ function newPlayer(name) {
   return { id: crypto.randomUUID(), name: String(name || 'Spieler').slice(0, 20), ws: null, board: null, ready: false, rematch: false, timer: null };
 }
 
-function createRoom(name, mode) {
+function createRoom(name, mode, theme) {
   const code = makeCode();
-  const cfg = Rules.getConfig(mode);
+  const cfg = Rules.getConfig(mode, theme);
   const room = { code, cfg, players: [newPlayer(name)], phase: 'lobby', turn: 0 };
   rooms.set(code, room);
   return { room, player: room.players[0] };
@@ -33,6 +33,10 @@ function joinRoom(code, name) {
   room.players.push(player);
   room.phase = 'placing';
   return { room, player };
+}
+
+function getRoom(code) {
+  return rooms.get(String(code || '').toUpperCase()) || null;
 }
 
 function findBySession(code, playerId) {
@@ -56,4 +60,4 @@ function removeRoom(room) {
   rooms.delete(room.code);
 }
 
-module.exports = { GRACE_MS, createRoom, joinRoom, findBySession, opponentOf, resetForPlacing, removeRoom, Rules };
+module.exports = { GRACE_MS, createRoom, joinRoom, getRoom, findBySession, opponentOf, resetForPlacing, removeRoom, Rules };

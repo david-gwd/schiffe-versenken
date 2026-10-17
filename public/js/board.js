@@ -32,8 +32,8 @@ const Board = (() => {
   }
 
   function drawShips(el, ships) {
-    clear(el, 'ship');
-    for (const s of ships) for (const c of Rules.cellsOf(s)) cell(el, c.x, c.y).classList.add('ship');
+    clear(el, 'ship', 'k2', 'k3', 'k4', 'k5');
+    for (const s of ships) for (const c of s.cells) cell(el, c.x, c.y).classList.add('ship', `k${Rules.tierOf(s)}`);
   }
 
   function mark(el, x, y, result) {
@@ -44,9 +44,9 @@ const Board = (() => {
   }
 
   function markSunk(el, ship, water) {
-    for (const c of Rules.cellsOf(ship)) {
+    for (const c of ship.cells) {
       const e = cell(el, c.x, c.y);
-      e.classList.add('hit', 'sunk'); e.classList.remove('fresh');
+      e.classList.add('hit', 'sunk', `k${Rules.tierOf(ship)}`); e.classList.remove('fresh');
     }
     for (const w of water || []) {
       const e = cell(el, w.x, w.y);
