@@ -1,0 +1,112 @@
+const path = require('path');
+const http = require('http');
+const express = require('express');
+const { WebSocketServer } = require('ws');
+const R = require('./rooms');
+const { Rules } = R;
+
+const app = express();
+app.use('/shared', express.static(path.join(__dirname, '..', 'shared')));
+app.use(express.static(path.join(__dirname, '..', 'public')));
+const server = http.createServer(app);
+const wss = new WebSocketServer({ server });
+
+function send(p, msg) {
+  if (p && p.ws && p.ws.readyState === 1) p.ws.send(JSON.stringify(msg));
+}
+
+function startIfReady(room) {
+  if (room.players.length === 2 && room.players.every((p) => p.ready)) {
+    room.phase = 'playing';
+    room.turn = Math.floor(Math.random() * 2);
+    room.players.forEach((p, i) => send(p, { type: 'start', yourTurn: i === room.turn }));
+  }
+}
+
+wss.on('connection', (ws) => {
+  let room = null, player = null;
+
+  function attach(r, p) {
+    room = r; player = p;
+    clearTimeout(p.timer);
+    p.ws = ws;
+  }
+
+  ws.on('message', (raw) => {
+    let m;
+    try { m = JSON.parse(raw); } catch { return; }
+    if (!m || typeof m.type !== 'string') return;
+
+    if (m.type === 'create' && !room) {
+      const r = R.createRoom(m.name, m.mode);
+      attach(r.room, r.player);
+      return send(player, { type: 'created', code: room.code, playerId: player.id, mode: room.cfg.mode });
+    }
+    if (m.type === 'join' && !room) {
+      const r = R.joinRoom(m.code, m.name);
+      if (r.error) return ws.send(JSON.stringify({ type: 'error', msg: r.error }));
+      attach(r.room, r.player);
+      const opp = R.opponentOf(room, player);
+      send(player, { type: 'joined', code: room.code, playerId: player.id, opponent: opp.name, mode: room.cfg.mode });
+      return send(opp, { type: 'opponent_joined', name: player.name });
+    }
+    if (m.type === 'resume' && !room) {
+      const found = R.findBySession(m.code, m.playerId);
+      if (!found) return ws.send(JSON.stringify({ type: 'resume_failed' }));
+      attach(found.room, found.player);
+      const opp = R.opponentOf(room, player);
+      send(player, { type: 'resumed', code: room.code, mode: room.cfg.mode, phase: room.phase, opponent: opp && opp.name, yourTurn: room.players[room.turn] === player, placed: player.ready });
+      return send(opp, { type: 'opponent_back' });
+    }
+    if (!room) return;
+    const opp = R.opponentOf(room, player);
+
+    if (m.type === 'place' && room.phase === 'placing' && !player.ready) {
+      if (!Rules.validatePlacement(m.ships, room.cfg)) return send(player, { type: 'error', msg: 'Ungültige Platzierung' });
+      player.board = Rules.createBoard(m.ships, room.cfg.size);
+      player.ready = true;
+      send(player, { type: 'placed_ok' });
+      send(opp, { type: 'opponent_ready' });
+      return startIfReady(room);
+    }
+
+    if (m.type === 'shoot' && room.phase === 'playing') {
+      if (room.players[room.turn] !== player) return send(player, { type: 'error', msg: 'Nicht an der Reihe' });
+      const res = Rules.applyShot(opp.board, m.x, m.y);
+      if (res.error) return send(player, { type: 'error', msg: res.error });
+      const keepTurn = Rules.EXTRA_SHOT_ON_HIT && res.result !== 'miss' && !res.allSunk;
+      if (!keepTurn) room.turn = 1 - room.turn;
+      const base = { type: 'shot', x: m.x, y: m.y, result: res.result, sunkShip: res.ship, water: res.water };
+      for (const p of room.players) send(p, { ...base, by: p === player ? 'you' : 'opponent', yourTurn: room.players[room.turn] === p });
+      if (res.allSunk) {
+        room.phase = 'over';
+        send(player, { type: 'game_over', winner: 'you', opponentShips: opp.board.ships.map(({ x, y, len, dir }) => ({ x, y, len, dir })) });
+        send(opp, { type: 'game_over', winner: 'opponent', opponentShips: player.board.ships.map(({ x, y, len, dir }) => ({ x, y, len, dir })) });
+      }
+      return;
+    }
+
+    if (m.type === 'rematch' && room.phase === 'over') {
+      player.rematch = true;
+      send(opp, { type: 'opponent_wants_rematch' });
+      if (room.players.length === 2 && room.players.every((p) => p.rematch)) {
+        R.resetForPlacing(room);
+        room.players.forEach((p) => send(p, { type: 'rematch_start' }));
+      }
+    }
+  });
+
+  ws.on('close', () => {
+    if (!player || player.ws !== ws) return;
+    player.ws = null;
+    send(R.opponentOf(room, player), { type: 'opponent_left' });
+    const r = room;
+    player.timer = setTimeout(() => {
+      const opp = R.opponentOf(r, player);
+      if (!opp || !opp.ws) R.removeRoom(r);
+    }, R.GRACE_MS);
+  });
+});
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => console.log(`Schiffe versenken läuft auf http://localhost:${PORT}`));
