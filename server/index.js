@@ -101,6 +101,23 @@ wss.on('connection', (ws) => {
       return;
     }
 
+    // Reaktions-Emoji: nur Einträge aus der festen Liste, höchstens eines alle 500 ms
+    if (m.type === 'reaction' && opp && room.phase !== 'lobby' && Rules.REACTIONS.includes(m.emoji)) {
+      const now = Date.now();
+      if (now - (player.lastReaction || 0) < 500) return;
+      player.lastReaction = now;
+      return send(opp, { type: 'reaction', emoji: m.emoji });
+    }
+
+    // Freitext: bereinigt, höchstens eine Nachricht pro Sekunde
+    if (m.type === 'chat' && opp && room.phase !== 'lobby') {
+      const text = Rules.cleanChat(m.text);
+      const now = Date.now();
+      if (!text || now - (player.lastChat || 0) < 1000) return;
+      player.lastChat = now;
+      return send(opp, { type: 'chat', text });
+    }
+
     if (m.type === 'rematch' && room.phase === 'over') {
       player.rematch = true;
       send(opp, { type: 'opponent_wants_rematch' });

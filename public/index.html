@@ -73,6 +73,7 @@
           <div class="titlebar"><span data-classic="FLOTTE.DAT" data-space="SEKTOR.DAT">FLOTTE.DAT</span><i></i></div>
           <div class="body"><div id="place-board" class="board"></div></div>
         </div>
+        <div class="side-col">
         <div class="win narrow">
           <div class="titlebar"><span data-classic="WERFT.EXE" data-space="OBJEKTE.EXE">WERFT.EXE</span><i></i></div>
           <div class="body">
@@ -83,23 +84,44 @@
             <button id="btn-ready" class="primary" disabled>Fertig</button>
           </div>
         </div>
+        <div class="win fit">
+          <div class="titlebar"><span>OPTIONEN.EXE</span><i></i></div>
+          <div class="body"><button type="button" class="btn-end">Spiel beenden</button></div>
+        </div>
+        </div>
       </div>
-      <div class="end-row"><button type="button" class="btn-end">Spiel beenden</button></div>
     </section>
 
     <section id="screen-game" class="screen" hidden>
       <p id="status" class="status"></p>
       <div class="boards">
-        <div class="win fit">
-          <div class="titlebar"><span id="own-title" data-classic="DEINE_FLOTTE" data-space="DEIN_SEKTOR">DEINE_FLOTTE</span><i></i></div>
-          <div class="body"><div id="own-board" class="board"></div></div>
+        <div class="col">
+          <div class="win fit">
+            <div class="titlebar"><span id="own-title" data-classic="DEINE_FLOTTE" data-space="DEIN_SEKTOR">DEINE_FLOTTE</span><i></i></div>
+            <div class="body"><div id="own-board" class="board"></div></div>
+          </div>
+          <div class="win game-extra">
+            <div class="titlebar"><span data-classic="FUNKSPRUCH.EXE" data-space="SIGNAL.EXE">FUNKSPRUCH.EXE</span><i></i></div>
+            <div class="body"><div id="reactions" class="reactions" role="group" aria-label="Reaktionen"></div></div>
+          </div>
         </div>
-        <div class="win fit">
-          <div class="titlebar"><span id="opp-title">GEGNER</span><i></i></div>
-          <div class="body"><div id="opp-board" class="board"></div></div>
+        <div class="col">
+          <div class="win fit">
+            <div class="titlebar"><span id="opp-title">GEGNER</span><i></i></div>
+            <div class="body"><div id="opp-board" class="board"></div></div>
+          </div>
+          <div class="game-extra extras-right">
+            <div class="win chat-box">
+              <div class="titlebar"><span>NACHRICHT.EXE</span><i></i></div>
+              <div class="body"><input id="chat-input" type="text" maxlength="120" placeholder="Hi Leonie :)" autocomplete="off" enterkeyhint="send" aria-label="Nachricht an den Gegner"></div>
+            </div>
+            <div class="win">
+              <div class="titlebar"><span>OPTIONEN.EXE</span><i></i></div>
+              <div class="body"><button type="button" class="btn-end">Spiel beenden</button></div>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="end-row" id="end-row-game"><button type="button" class="btn-end">Spiel beenden</button></div>
       <div id="over" class="win narrow" hidden>
         <div class="titlebar"><span data-classic="SPIEL_VORBEI.EXE" data-space="MISSION_ENDE.EXE">SPIEL_VORBEI.EXE</span><i></i></div>
         <div class="body">
@@ -125,6 +147,8 @@
     </div>
   </div>
   <div id="toast" hidden></div>
+  <div id="chat-log" aria-live="polite"></div>
+  <div id="reaction-bubble" hidden aria-live="polite"></div>
   <script src="/shared/rules.js"></script>
   <script src="js/board.js"></script>
   <script src="js/placement.js"></script>

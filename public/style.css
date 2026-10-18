@@ -131,11 +131,49 @@ body.theme-space .grid { border-color: var(--purple); }
   #theme-switch[aria-checked="true"] .knob { border-left-width: 2px; box-shadow: inset 2px 2px 0 #7fe0d8, inset -2px -2px 0 var(--teal-dark); }
 }
 
-/* Spiel beenden: Button mittig unterhalb der Fenster (mobil: unter dem untersten Fenster) */
-.end-row { display: flex; justify-content: center; margin-top: 28px; }
-.btn-end { font-size: .55rem; padding: 7px 10px; }
-.btn-end:hover:not(:disabled) { background: #ff9a8a; }
-.end-row[hidden] { display: none; }
+/* Platzierung: Optionen-Box rechtsbündig unter der Werft-Box */
+.side-col { display: flex; flex-direction: column; align-items: flex-end; gap: 28px; width: 100%; max-width: 360px; }
+.side-col > .win.narrow { max-width: none; }
+.side-col > .win.fit { width: max-content; }
+/* Spiel beenden: roter Button */
+.btn-end { font-size: .55rem; padding: 7px 10px; background: #d9432b; color: #fff; text-shadow: 1px 1px 0 #7a1f10; }
+.btn-end:hover:not(:disabled) { background: #ee5a40; }
+
+/* Unter jedem Spielfeld eine Spalte: Boxen sind automatisch genauso breit wie das Spielfeld */
+.col { display: flex; flex-direction: column; gap: 28px; width: max-content; max-width: 100%; }
+.col > .win.game-extra, .extras-right { width: 0; min-width: 100%; margin: 0; } /* tragen nicht zur Spaltenbreite bei – die bestimmt allein das Spielfeld */
+.extras-right { display: flex; gap: 16px; align-items: stretch; }
+.extras-right > .win { margin: 0; }
+.extras-right .chat-box { flex: 1; min-width: 0; overflow: hidden; }
+.chat-box input { width: 100%; min-width: 0; }
+.game-extra[hidden] { display: none; }
+/* etwas kleinere Titel, damit das Quadrat rechts auch in schmalen Boxen sichtbar bleibt */
+.game-extra .titlebar, .side-col > .win.fit .titlebar { font-size: .5rem; letter-spacing: .04em; gap: 6px; white-space: nowrap; }
+.game-extra .titlebar i, .side-col > .win.fit .titlebar i { flex: none; }
+.game-extra .body { min-height: 72px; justify-content: center; box-sizing: border-box; }
+.reactions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; align-items: center; }
+
+/* Schmale Bildschirme: Spielfelder untereinander, danach Emoji-Box, danach Nachricht + Optionen (alle so breit wie ein Spielfeld) */
+@media (max-width: 960px) {
+  .boards { display: grid; grid-template-columns: minmax(0, max-content); justify-content: center; gap: 28px; }
+  .col { display: contents; }
+  .boards .col:first-child > .win.fit { order: 1; }
+  .boards .col:last-child > .win.fit { order: 2; }
+  .boards .col:first-child > .game-extra { order: 3; }
+  .boards .col:last-child > .game-extra { order: 4; }
+}
+.reactions button { font-size: 1.6rem; line-height: 1; padding: 4px 6px; text-transform: none; background: none; border: 0; box-shadow: none; }
+.reactions button:hover:not(:disabled) { background: none; transform: scale(1.25); }
+.reactions button:active:not(:disabled) { transform: scale(1.05); box-shadow: none; }
+/* Chat-Nachrichten: oben mittig, verschwinden nach 6 s */
+#chat-log { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); width: max-content; max-width: min(90vw, 480px); display: flex; flex-direction: column; align-items: center; gap: 8px; z-index: 12; pointer-events: none; }
+.chat-msg { padding: 8px 14px; color: var(--ink); background: var(--cream); border: 3px solid var(--ink); box-shadow: 4px 4px 0 var(--ink); overflow-wrap: anywhere; animation: pop .25s steps(3); }
+.chat-msg.mine { background: var(--teal); color: #fff; }
+.chat-msg b { font-weight: normal; font-family: var(--pixel); font-size: .6rem; }
+/* Reaktion: nur das Emoji, wächst in ca. 1 s auf Bildschirmgröße an und blendet am Ende aus */
+#reaction-bubble { position: fixed; inset: 0; z-index: 15; display: grid; place-items: center; font-size: 70vmin; line-height: 1; pointer-events: none; animation: reaction-zoom 1s ease-in forwards; }
+#reaction-bubble[hidden] { display: none; }
+@keyframes reaction-zoom { from { transform: scale(.05); opacity: 1; } 80% { opacity: 1; } to { transform: scale(1); opacity: 0; } }
 
 /* Spielende-Popup */
 .modal { position: fixed; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(6, 6, 13, .78); }

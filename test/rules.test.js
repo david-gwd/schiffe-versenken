@@ -130,3 +130,14 @@ test('applyShot respektiert die Feldgröße', () => {
 test('tierOf liefert die Farbstufe', () => {
   assert.deepEqual([dot(0, 0), line(0, 0, 3), square(0, 0), plus(1, 1), line(0, 0, 5)].map(R.tierOf), [2, 3, 4, 5, 5]);
 });
+
+test('Reaktionen: genau die sechs erlaubten Emojis', () => {
+  assert.deepEqual(R.REACTIONS.map((e) => e.codePointAt(0)), [0x1F972, 0x1F605, 0x1F914, 0x1F62E, 0x1F44C, 0x1F525]);
+});
+
+test('Chat-Text wird bereinigt', () => {
+  assert.equal(R.cleanChat('  Hi \n du  '), 'Hi   du');
+  assert.equal(R.cleanChat('   '), null);
+  assert.equal(R.cleanChat(42), null);
+  assert.equal(R.cleanChat('x'.repeat(500)).length, R.CHAT_MAX);
+});

@@ -42,6 +42,46 @@
     clearTimeout(toast.t); toast.t = setTimeout(() => (t.hidden = true), 2500);
   }
 
+  function showChat(text, who, mine) {
+    const log = $('chat-log');
+    const el = document.createElement('div');
+    el.className = mine ? 'chat-msg mine' : 'chat-msg';
+    const name = document.createElement('b'); name.textContent = who;
+    el.append(name, document.createTextNode(' ' + text));
+    log.append(el);
+    while (log.children.length > 3) log.firstChild.remove();
+    setTimeout(() => el.remove(), 6000);
+  }
+
+  let lastChat = 0;
+  $('chat-input').addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || e.isComposing) return;
+    const text = Rules.cleanChat($('chat-input').value);
+    if (!text || Date.now() - lastChat < 1000) return;
+    lastChat = Date.now();
+    send({ type: 'chat', text });
+    showChat(text, 'Du:', true);
+    $('chat-input').value = '';
+    // Handy: Tastatur schließen, damit die Nachricht sichtbar ist
+    if (matchMedia('(pointer: coarse)').matches) $('chat-input').blur();
+  });
+
+  function setExtras(hide) { for (const e of document.querySelectorAll('.game-extra')) e.hidden = hide; }
+
+  function showReaction(emoji) {
+    const b = $('reaction-bubble');
+    b.textContent = emoji; b.hidden = false;
+    b.style.animation = 'none'; void b.offsetWidth; b.style.animation = '';
+    clearTimeout(showReaction.t); showReaction.t = setTimeout(() => (b.hidden = true), 1000);
+  }
+
+  for (const emoji of Rules.REACTIONS) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.textContent = emoji; b.setAttribute('aria-label', `Reaktion ${emoji}`);
+    b.onclick = () => { send({ type: 'reaction', emoji }); showReaction(emoji); };
+    $('reactions').append(b);
+  }
+
   function send(m) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(m)); }
 
   function setStatus() {
@@ -68,7 +108,7 @@
       if (!Board.cell(oppEl, x, y).classList.contains('fresh')) return;
       send({ type: 'shoot', x, y });
     } });
-    $('over').hidden = true; $('end-row-game').hidden = false;
+    $('over').hidden = true; setExtras(false);
     active = true; myTurn = yourTurn;
     show('game'); setStatus();
   }
@@ -142,8 +182,10 @@
           }
         }
         showEndModal(m.winner === 'you');
-        $('over').hidden = false; $('end-row-game').hidden = true; $('btn-rematch').disabled = false; break;
+        $('over').hidden = false; setExtras(true); $('btn-rematch').disabled = false; break;
       }
+      case 'chat': showChat(m.text, $('opp-title').textContent + ':', false); break;
+      case 'reaction': showReaction(m.emoji); break;
       case 'opponent_wants_rematch': toast('Gegner möchte eine Revanche'); break;
       case 'rematch_start': enterPlacing(); break;
       case 'game_ended': toast('Gegner hat das Spiel beendet'); leave(); break;

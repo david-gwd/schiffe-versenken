@@ -167,5 +167,16 @@
     return { result: 'sunk', ship: clean(ship), water, allSunk };
   }
 
-  return { MODES, THEMES, EXTRA_SHOT_ON_HIT, ASTEROID_GAP, getConfig, tierOf, placements, isShape, inBounds, canPlace, validatePlacement, randomPlacement, createBoard, applyShot };
+  // Erlaubte Chat-Reaktionen (nur diese Emojis werden vom Server weitergeleitet)
+  const REACTIONS = ['\u{1F972}', '\u{1F605}', '\u{1F914}', '\u{1F62E}', '\u{1F44C}', '\u{1F525}'];
+
+  // Freitext-Chat: Steuerzeichen raus, trimmen, kürzen; leer → null
+  const CHAT_MAX = 120;
+  function cleanChat(text) {
+    if (typeof text !== 'string') return null;
+    const t = text.replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, CHAT_MAX).trim();
+    return t || null;
+  }
+
+  return { MODES, THEMES, REACTIONS, CHAT_MAX, cleanChat, EXTRA_SHOT_ON_HIT, ASTEROID_GAP, getConfig, tierOf, placements, isShape, inBounds, canPlace, validatePlacement, randomPlacement, createBoard, applyShot };
 });
