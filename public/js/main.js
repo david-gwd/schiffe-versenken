@@ -6,7 +6,7 @@
     $('theme-switch').hidden = name !== 'start';
   };
   const ownEl = $('own-board'), oppEl = $('opp-board');
-  let ws, myTurn = false, active = false, myShips = [], myName = 'Kapitän', cfg = Rules.getConfig('normal', 'classic');
+  let ws, lastWon = false, myTurn = false, active = false, myShips = [], myName = 'Kapitän', cfg = Rules.getConfig('normal', 'classic');
 
   const TXT = {
     classic: { place: 'Platziere deine Flotte', win: 'Du hast gewonnen!', lose: 'Du hast verloren.', winHead: 'Sieg', loseHead: 'Niederlage', winText: 'Die gegnerische Flotte liegt auf dem Grund.', loseText: 'Deine Flotte wurde versenkt.', bar: 'SPIEL_VORBEI.EXE', icon: 'ship.png', title: 'Schiffe versenken', themeName: 'Klassisch', defaultName: 'Kapitän' },
@@ -113,6 +113,18 @@
     show('game'); setStatus();
   }
 
+  // Revanche-Anfrage des Gegners: als Kasten über dem Missionsende-Popup, sonst als eigenes Popup mittig auf dem Bildschirm
+  let inviteOpen = false;
+  function syncInvite() {
+    const inPopup = !$('end-modal').hidden;
+    $('invite-modal').hidden = !inviteOpen || inPopup;
+    for (const el of document.querySelectorAll('.rematch-invite')) {
+      el.hidden = !inviteOpen;
+      el.querySelector('.invite-text').textContent = `${$('opp-title').textContent} möchte eine Revanche.`;
+    }
+  }
+  function setInvite(visible) { inviteOpen = visible; syncInvite(); }
+
   function showEndModal(won) {
     const t = TXT[theme];
     $('end-bar').textContent = t.bar;
@@ -172,7 +184,7 @@
       case 'start': enterGame(m.yourTurn); break;
       case 'shot': onShot(m); break;
       case 'game_over': {
-        active = false; oppEl.classList.remove('target');
+        active = false; oppEl.classList.remove('target'); lastWon = m.winner === 'you'; setInvite(false);
         $('status').textContent = m.winner === 'you' ? TXT[theme].win : TXT[theme].lose;
         if (m.winner !== 'you') {
           // reveal opponent's remaining ships on the right board
@@ -186,8 +198,12 @@
       }
       case 'chat': showChat(m.text, $('opp-title').textContent + ':', false); break;
       case 'reaction': showReaction(m.emoji); break;
-      case 'opponent_wants_rematch': toast('Gegner möchte eine Revanche'); break;
-      case 'rematch_start': enterPlacing(); break;
+      case 'opponent_wants_rematch': setInvite(true); break;
+      case 'rematch_declined':
+        toast('Gegner hat die Revanche abgelehnt');
+        $('status').textContent = lastWon ? TXT[theme].win : TXT[theme].lose;
+        $('btn-rematch').disabled = false; $('pop-rematch').disabled = false; break;
+      case 'rematch_start': setInvite(false); enterPlacing(); break;
       case 'game_ended': toast('Gegner hat das Spiel beendet'); leave(); break;
       case 'opponent_left': toast('Gegner hat die Verbindung verloren – warte …'); break;
       case 'opponent_back': toast('Gegner ist zurück'); break;
@@ -205,6 +221,7 @@
   }
 
   function leave() {
+    setInvite(false);
     store.clear(); active = false; $('end-modal').hidden = true;
     if (ws) { ws.onclose = null; ws.close(); }
     history.replaceState(null, '', '/');
@@ -239,11 +256,13 @@
   };
   $('btn-copy').onclick = () => { navigator.clipboard.writeText($('link').value).then(() => toast('Link kopiert')); };
   $('btn-ready').onclick = () => { if (Placement.isComplete()) send({ type: 'place', ships: Placement.ships() }); };
-  $('btn-rematch').onclick = () => { send({ type: 'rematch' }); $('btn-rematch').disabled = true; $('status').textContent = 'Warte auf Revanche-Zusage …'; };
+  $('btn-rematch').onclick = () => { setInvite(false); send({ type: 'rematch' }); $('btn-rematch').disabled = true; $('status').textContent = 'Warte auf Revanche-Zusage …'; };
   $('btn-leave').onclick = leave;
+  for (const b of document.querySelectorAll('.invite-accept')) b.onclick = () => { $('btn-rematch').click(); $('end-modal').hidden = true; syncInvite(); };
+  for (const b of document.querySelectorAll('.invite-decline')) b.onclick = () => { setInvite(false); send({ type: 'rematch_decline' }); };
   $('pop-rematch').onclick = () => { $('btn-rematch').click(); $('end-modal').hidden = true; };
   $('pop-leave').onclick = leave;
-  $('pop-view').onclick = $('pop-close').onclick = () => { $('end-modal').hidden = true; };
+  $('pop-view').onclick = $('pop-close').onclick = () => { $('end-modal').hidden = true; syncInvite(); };
   for (const b of document.querySelectorAll('.btn-end')) b.onclick = () => {
     if (confirm('Spiel wirklich beenden? Das Spiel wird auch für deinen Gegner beendet.')) { send({ type: 'leave' }); leave(); }
   };
@@ -270,6 +289,12 @@
   const room = new URLSearchParams(location.search).get('room');
   if (room) { $('code').value = room.toUpperCase(); }
   applyTheme('classic');
-  if (store.get()) resume();
-  else { show('start'); lookupRoom(); }
+  const saved = store.get();
+  if (saved && (!room || saved.code === room.toUpperCase())) resume();
+  else if (room) {
+    // Einladungslink: direkt beitreten, ohne auf "Beitreten" zu klicken
+    store.clear();
+    show('start'); lookupRoom();
+    connect(() => send({ type: 'join', code: room.toUpperCase(), name: name() }));
+  } else { show('start'); lookupRoom(); }
 })();

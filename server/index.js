@@ -118,6 +118,12 @@ wss.on('connection', (ws) => {
       return send(opp, { type: 'chat', text });
     }
 
+    // Revanche-Anfrage ablehnen: Anfragenden informieren, damit er wieder frei wählen kann
+    if (m.type === 'rematch_decline' && room.phase === 'over' && opp && opp.rematch) {
+      opp.rematch = false;
+      return send(opp, { type: 'rematch_declined' });
+    }
+
     if (m.type === 'rematch' && room.phase === 'over') {
       player.rematch = true;
       send(opp, { type: 'opponent_wants_rematch' });
