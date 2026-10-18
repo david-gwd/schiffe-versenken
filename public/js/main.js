@@ -9,8 +9,8 @@
   let ws, myTurn = false, active = false, myShips = [], myName = 'Kapitän', cfg = Rules.getConfig('normal', 'classic');
 
   const TXT = {
-    classic: { place: 'Platziere deine Flotte', win: '🎉 Du hast gewonnen!', lose: '💥 Du hast verloren.', title: 'Schiffe versenken', themeName: 'Klassisch', defaultName: 'Kapitän' },
-    space: { place: 'Platziere deine Objekte im Weltraum', win: '🎉 Du hast gewonnen – alle Objekte zerstört!', lose: '💥 Du hast verloren – dein Sektor ist leer.', title: 'Weltraum-Schlacht', themeName: 'Weltraum', defaultName: 'Astronaut' },
+    classic: { place: 'Platziere deine Flotte', win: 'Du hast gewonnen!', lose: 'Du hast verloren.', winHead: 'Sieg', loseHead: 'Niederlage', winText: 'Die gegnerische Flotte liegt auf dem Grund.', loseText: 'Deine Flotte wurde versenkt.', bar: 'SPIEL_VORBEI.EXE', icon: 'ship.png', title: 'Schiffe versenken', themeName: 'Klassisch', defaultName: 'Kapitän' },
+    space: { place: 'Platziere deine Objekte im Weltraum', win: 'Du hast gewonnen – alle Objekte zerstört!', lose: 'Du hast verloren – dein Sektor ist leer.', winHead: 'Sieg', loseHead: 'Niederlage', winText: 'Der gegnerische Sektor ist ausgelöscht.', loseText: 'Dein Sektor ist leer.', bar: 'MISSION_ENDE.EXE', icon: 'rocket.png', title: 'Weltraum-Schlacht', themeName: 'Weltraum', defaultName: 'Astronaut' },
   };
   let theme = 'classic';
 
@@ -51,6 +51,7 @@
   }
 
   function enterPlacing() {
+    $('end-modal').hidden = true;
     Placement.setConfig(cfg);
     $('btn-ready').disabled = true;
     $('place-info').textContent = TXT[theme].place;
@@ -67,9 +68,21 @@
       if (!Board.cell(oppEl, x, y).classList.contains('fresh')) return;
       send({ type: 'shoot', x, y });
     } });
-    $('over').hidden = true;
+    $('over').hidden = true; $('end-row-game').hidden = false;
     active = true; myTurn = yourTurn;
     show('game'); setStatus();
+  }
+
+  function showEndModal(won) {
+    const t = TXT[theme];
+    $('end-bar').textContent = t.bar;
+    $('end-icon').src = t.icon;
+    $('end-title').textContent = won ? t.winHead : t.loseHead;
+    $('end-text').textContent = won ? t.winText : t.loseText;
+    const body = $('end-modal').querySelector('.end-body');
+    body.classList.toggle('win-state', won); body.classList.toggle('lose-state', !won);
+    $('pop-rematch').disabled = false;
+    $('end-modal').hidden = false;
   }
 
   function onShot(m) {
@@ -128,10 +141,12 @@
             if (!e.classList.contains('hit')) e.classList.add('ship', `k${Rules.tierOf(s)}`);
           }
         }
-        $('over').hidden = false; $('btn-rematch').disabled = false; break;
+        showEndModal(m.winner === 'you');
+        $('over').hidden = false; $('end-row-game').hidden = true; $('btn-rematch').disabled = false; break;
       }
       case 'opponent_wants_rematch': toast('Gegner möchte eine Revanche'); break;
       case 'rematch_start': enterPlacing(); break;
+      case 'game_ended': toast('Gegner hat das Spiel beendet'); leave(); break;
       case 'opponent_left': toast('Gegner hat die Verbindung verloren – warte …'); break;
       case 'opponent_back': toast('Gegner ist zurück'); break;
       case 'resumed':
@@ -148,7 +163,7 @@
   }
 
   function leave() {
-    store.clear(); active = false;
+    store.clear(); active = false; $('end-modal').hidden = true;
     if (ws) { ws.onclose = null; ws.close(); }
     history.replaceState(null, '', '/');
     show('start');
@@ -184,6 +199,12 @@
   $('btn-ready').onclick = () => { if (Placement.isComplete()) send({ type: 'place', ships: Placement.ships() }); };
   $('btn-rematch').onclick = () => { send({ type: 'rematch' }); $('btn-rematch').disabled = true; $('status').textContent = 'Warte auf Revanche-Zusage …'; };
   $('btn-leave').onclick = leave;
+  $('pop-rematch').onclick = () => { $('btn-rematch').click(); $('end-modal').hidden = true; };
+  $('pop-leave').onclick = leave;
+  $('pop-view').onclick = $('pop-close').onclick = () => { $('end-modal').hidden = true; };
+  for (const b of document.querySelectorAll('.btn-end')) b.onclick = () => {
+    if (confirm('Spiel wirklich beenden? Das Spiel wird auch für deinen Gegner beendet.')) { send({ type: 'leave' }); leave(); }
+  };
   $('btn-cancel').onclick = () => { send({ type: 'leave' }); leave(); };
 
   // Raum-Code → Variante des Raums anzeigen (Theme wechselt passend mit)
@@ -202,6 +223,7 @@
     } catch { info.hidden = true; }
   }
   $('code').addEventListener('input', lookupRoom);
+  $('code').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('btn-join').click(); });
 
   const room = new URLSearchParams(location.search).get('room');
   if (room) { $('code').value = room.toUpperCase(); }

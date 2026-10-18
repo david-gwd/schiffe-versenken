@@ -70,6 +70,12 @@ wss.on('connection', (ws) => {
     // Wartenden Raum abbrechen: Code sofort ungültig machen
     if (m.type === 'leave' && !opp) { R.removeRoom(room); room = null; player = null; return; }
 
+    // Laufendes Spiel beenden: Gegner benachrichtigen, Raum schließen
+    if (m.type === 'leave' && opp) {
+      send(opp, { type: 'game_ended' });
+      R.removeRoom(room); room = null; player = null; return;
+    }
+
     if (m.type === 'place' && room.phase === 'placing' && !player.ready) {
       if (!Rules.validatePlacement(m.ships, room.cfg)) return send(player, { type: 'error', msg: 'Ungültige Platzierung' });
       player.board = Rules.createBoard(m.ships, room.cfg.size);

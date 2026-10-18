@@ -84,6 +84,7 @@
           </div>
         </div>
       </div>
+      <div class="end-row"><button type="button" class="btn-end">Spiel beenden</button></div>
     </section>
 
     <section id="screen-game" class="screen" hidden>
@@ -98,6 +99,7 @@
           <div class="body"><div id="opp-board" class="board"></div></div>
         </div>
       </div>
+      <div class="end-row" id="end-row-game"><button type="button" class="btn-end">Spiel beenden</button></div>
       <div id="over" class="win narrow" hidden>
         <div class="titlebar"><span data-classic="SPIEL_VORBEI.EXE" data-space="MISSION_ENDE.EXE">SPIEL_VORBEI.EXE</span><i></i></div>
         <div class="body">
@@ -109,6 +111,19 @@
   </main>
 
   <footer>© 1999–2026 <span data-classic="SCHIFFE VERSENKEN" data-space="WELTRAUM-SCHLACHT">SCHIFFE VERSENKEN</span> • MADE WITH <b>♥</b> AND PIXELS</footer>
+  <div id="end-modal" class="modal" hidden>
+    <div class="win narrow" role="dialog" aria-modal="true" aria-labelledby="end-title">
+      <div class="titlebar"><span id="end-bar">SPIEL_VORBEI.EXE</span><button id="pop-close" class="close" type="button" aria-label="Schließen" title="Schließen">x</button></div>
+      <div class="body end-body">
+        <img id="end-icon" src="ship.png" alt="">
+        <h2 id="end-title"></h2>
+        <p id="end-text" class="muted"></p>
+        <button id="pop-rematch" class="primary">Revanche</button>
+        <button id="pop-leave">Neues Spiel</button>
+        <button id="pop-view">Spielfeld ansehen</button>
+      </div>
+    </div>
+  </div>
   <div id="toast" hidden></div>
   <script src="/shared/rules.js"></script>
   <script src="js/board.js"></script>

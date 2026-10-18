@@ -1,6 +1,18 @@
 const Board = (() => {
   const LETTERS = 'ABCDEFGHIJKLMNO';
 
+  // Zufälliger Hintergrundstern pro Zelle (nur im Weltraum-Theme sichtbar): Position, Größe, Helligkeit
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  function randomStar(c) {
+    if (Math.random() < 0.4) return; // ca. 40 % der Felder ohne Stern
+    const s = Math.random() < 0.85 ? 1 : 2;
+    c.style.setProperty('--ss', s + 'px');
+    c.style.setProperty('--sx', rnd(10, 85).toFixed(0) + '%');
+    c.style.setProperty('--sy', rnd(10, 85).toFixed(0) + '%');
+    c.style.setProperty('--so', rnd(0.2, 0.55).toFixed(2));
+    if (Math.random() < 0.2) c.style.setProperty('--s2', `${(rnd(-14, 14)).toFixed(0)}px ${(rnd(-14, 14)).toFixed(0)}px 0 #b9c4ff`);
+  }
+
   // Baut Beschriftung (Buchstaben oben, Zahlen links) und size×size Zellen in `el`.
   function build(el, size, { onClick, onHover, onLeave } = {}) {
     el.innerHTML = '';
@@ -18,6 +30,7 @@ const Board = (() => {
     el._cells = [];
     for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
       const c = mk('cell fresh', grid);
+      randomStar(c);
       if (onClick) c.addEventListener('click', () => onClick(x, y));
       if (onHover) c.addEventListener('mouseenter', () => onHover(x, y));
       el._cells.push(c);

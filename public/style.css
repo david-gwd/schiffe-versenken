@@ -73,10 +73,7 @@ button:disabled { opacity: .45; cursor: not-allowed; box-shadow: 4px 4px 0 var(-
 
 /* Weltraum-Theme: dunkler Raum mit Sternen, farbige Objekte (:where hält die Spezifität niedrig) */
 :where(.theme-space) .cell { border-color: rgba(243, 230, 196, .08); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .25); }
-:where(.theme-space) .cell.fresh::before { content: ''; position: absolute; width: 2px; height: 2px; background: var(--cream); opacity: .5; top: 20%; left: 25%; }
-:where(.theme-space) .cell.fresh:nth-child(3n+1)::before { top: 65%; left: 60%; opacity: .35; }
-:where(.theme-space) .cell.fresh:nth-child(5n+2)::before { top: 40%; left: 75%; width: 3px; height: 3px; opacity: .7; }
-:where(.theme-space) .cell.fresh:nth-child(7n+4)::before { display: none; }
+:where(.theme-space) .cell.fresh::before { content: ''; position: absolute; left: var(--sx, 25%); top: var(--sy, 20%); width: var(--ss, 0px); height: var(--ss, 0px); background: #b9c4ff; opacity: var(--so, .4); box-shadow: var(--s2, 0 0 transparent); }   /* Sterne: Position/Größe pro Zelle zufällig (board.js) */
 :where(.theme-space) .cell.ship.k2 { background: #8a7f73; box-shadow: inset 3px 3px 0 #b5aa9c, inset -3px -3px 0 #5a5148; }   /* Asteroid */
 :where(.theme-space) .cell.ship.k3 { background: #e8465a; box-shadow: inset 3px 3px 0 #ff8c9a, inset -3px -3px 0 #9c1f35; }   /* Raumschiff */
 :where(.theme-space) .cell.ship.k4 { background: #4a7bd8; box-shadow: inset 3px 3px 0 #8fb0f0, inset -3px -3px 0 #26468f; }   /* Planet */
@@ -133,3 +130,19 @@ body.theme-space .grid { border-color: var(--purple); }
   #theme-switch .knob { border-right-width: 2px; box-shadow: inset 2px 2px 0 #ffb06a, inset -2px -2px 0 #b44f12; }
   #theme-switch[aria-checked="true"] .knob { border-left-width: 2px; box-shadow: inset 2px 2px 0 #7fe0d8, inset -2px -2px 0 var(--teal-dark); }
 }
+
+/* Spiel beenden: Button mittig unterhalb der Fenster (mobil: unter dem untersten Fenster) */
+.end-row { display: flex; justify-content: center; margin-top: 28px; }
+.btn-end { font-size: .55rem; padding: 7px 10px; }
+.btn-end:hover:not(:disabled) { background: #ff9a8a; }
+.end-row[hidden] { display: none; }
+
+/* Spielende-Popup */
+.modal { position: fixed; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(6, 6, 13, .78); }
+.modal .win { animation: pop .25s steps(3); }
+.end-body { text-align: center; }
+.end-body img { width: 64px; height: 64px; margin: 0 auto; image-rendering: pixelated; }
+.end-body h2 { margin: 0; font-family: var(--pixel); font-size: 1.3rem; line-height: 1.3; text-transform: uppercase; text-shadow: 2px 2px 0 var(--ink); }
+.end-body.win-state h2 { color: var(--teal); }
+.end-body.lose-state h2 { color: #d9432b; }
+.end-body.lose-state img { filter: grayscale(1); opacity: .7; }
