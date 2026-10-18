@@ -1,5 +1,9 @@
 # Schiffe versenken / Weltraum-Schlacht
 
+![Dashboard](dashboard.png)
+
+**Live ausprobieren:** https://schiffe-versenken-z71e.onrender.com
+
 Online-Multiplayer im Browser (Node.js + WebSockets, Frontend ohne Build-Tools).
 Auf der Startseite wählt man mit dem großen Schalter links oben die Version:
 
