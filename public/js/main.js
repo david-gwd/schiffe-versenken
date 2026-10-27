@@ -308,10 +308,9 @@
     if (id) Logbook.openGame(id); else Logbook.openList();
   }
   else if (saved && (!room || saved.code === room.toUpperCase())) resume();
-  else if (room) {
-    // Einladungslink: direkt beitreten, ohne auf "Beitreten" zu klicken
-    store.clear();
+  else {
+    // Einladungslink: Code ist schon eingetragen, Name eingeben und auf "Beitreten" klicken
+    if (room) { store.clear(); $('name').focus(); }
     show('start'); lookupRoom();
-    connect(() => send({ type: 'join', code: room.toUpperCase(), name: name(), deviceId }));
-  } else { show('start'); lookupRoom(); }
+  }
 })();
