@@ -1,6 +1,6 @@
 (() => {
   const $ = (id) => document.getElementById(id);
-  const screens = ['start', 'lobby', 'place', 'game'];
+  const screens = ['start', 'lobby', 'place', 'game', 'logbook', 'log-game'];
   const show = (name) => {
     screens.forEach((s) => ($('screen-' + s).hidden = s !== name));
     $('theme-switch').hidden = name !== 'start';
@@ -36,6 +36,16 @@
     set(v) { try { sessionStorage.setItem('sv', JSON.stringify(v)); } catch {} },
     clear() { try { sessionStorage.removeItem('sv'); } catch {} },
   };
+
+  // Geräte-ID: bleibt in diesem Browser gespeichert, damit das Logbuch Partien Geräten zuordnen kann
+  const deviceId = (() => {
+    try {
+      let id = localStorage.getItem('sv-device');
+      // randomUUID gibt es nur über https/localhost – im WLAN (http://IP) Zufalls-Hex als Ersatz
+      if (!id) { id = crypto.randomUUID ? crypto.randomUUID() : [...crypto.getRandomValues(new Uint8Array(16))].map((b) => b.toString(16).padStart(2, '0')).join(''); localStorage.setItem('sv-device', id); }
+      return id;
+    } catch { return null; }
+  })();
 
   function toast(msg) {
     const t = $('toast'); t.textContent = msg; t.hidden = false;
@@ -247,12 +257,12 @@
   $('btn-create').onclick = () => {
     const mode = selectedMode();
     if (!mode) return toast(chosen('size') ? 'Bitte Schwierigkeit wählen' : 'Bitte Spielfeld wählen');
-    connect(() => send({ type: 'create', name: name(), mode, theme }));
+    connect(() => send({ type: 'create', name: name(), mode, theme, deviceId }));
   };
   $('btn-join').onclick = () => {
     const code = $('code').value.trim().toUpperCase();
     if (!code) return toast('Bitte Raum-Code eingeben');
-    connect(() => send({ type: 'join', code, name: name() }));
+    connect(() => send({ type: 'join', code, name: name(), deviceId }));
   };
   $('btn-copy').onclick = () => { navigator.clipboard.writeText($('link').value).then(() => toast('Link kopiert')); };
   $('btn-ready').onclick = () => { if (Placement.isComplete()) send({ type: 'place', ships: Placement.ships() }); };
@@ -286,15 +296,22 @@
   $('code').addEventListener('input', lookupRoom);
   $('code').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('btn-join').click(); });
 
+  Logbook.init({ show, applyTheme, toast, theme: () => theme });
+
   const room = new URLSearchParams(location.search).get('room');
+  const logbookPage = location.pathname.replace(/\/+$/, '') === '/logbuch';
   if (room) { $('code').value = room.toUpperCase(); }
   applyTheme('classic');
   const saved = store.get();
-  if (saved && (!room || saved.code === room.toUpperCase())) resume();
+  if (logbookPage) {
+    const id = new URLSearchParams(location.search).get('partie');
+    if (id) Logbook.openGame(id); else Logbook.openList();
+  }
+  else if (saved && (!room || saved.code === room.toUpperCase())) resume();
   else if (room) {
     // Einladungslink: direkt beitreten, ohne auf "Beitreten" zu klicken
     store.clear();
     show('start'); lookupRoom();
-    connect(() => send({ type: 'join', code: room.toUpperCase(), name: name() }));
+    connect(() => send({ type: 'join', code: room.toUpperCase(), name: name(), deviceId }));
   } else { show('start'); lookupRoom(); }
 })();

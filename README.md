@@ -18,6 +18,13 @@ npm start
 Dann `http://localhost:3000` öffnen. Spiel erstellen, den Link an den Mitspieler schicken.
 Im selben WLAN: `http://<IP-des-Mac>:3000`.
 
+## Logbuch
+Jede zu Ende gespielte Partie wird in `data/logbook.json` gespeichert: Namen, Geräte-ID (pro Browser), Datum/Uhrzeit, Variante, Gewinner, beide Aufstellungen und alle Schüsse in Reihenfolge.
+Das Logbuch ist nicht verlinkt, sondern nur über `/logbuch` erreichbar (z. B. `http://localhost:3000/logbuch`). Dort lassen sich alte Partien ansehen – mit Endstand beider Felder und Zug-für-Zug-Wiedergabe –, nachträglich Aliasse für die Spieler und ein Kommentar vergeben sowie Partien einzeln oder komplett löschen.
+Direktlink zu einer Partie: `/logbuch?partie=<id>`.
+Das Logbuch ist passwortgeschützt (Browser fragt nach Benutzer + Passwort, Benutzername egal). Das Passwort steht **nicht** im Repo, sondern in `data/logbook-password.txt` (von Git ignoriert) oder in der Umgebungsvariable `LOGBOOK_PASSWORD` (z. B. auf Render unter *Environment*). Ist keins gesetzt, bleibt das Logbuch gesperrt. Anderer Speicherort: `LOGBOOK_FILE=/pfad/zur/datei.json npm start`.
+Hinweis: Auf Render (kostenlos) ist das Dateisystem nicht dauerhaft – dort verschwindet das Logbuch bei Neustart/Deploy.
+
 ## Tests
 ```
 npm test

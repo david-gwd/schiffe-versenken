@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+  <base href="/">
   <link rel="icon" id="favicon" type="image/png" href="ship.png">
   <link rel="stylesheet" href="style.css">
 </head>
@@ -48,6 +49,57 @@
           <label>Raum-Code <input id="code" maxlength="6" placeholder="ABC123" autocomplete="off"></label>
           <button id="btn-join">Beitreten</button>
           <p class="muted" id="room-info" hidden></p>
+        </div>
+      </div>
+    </section>
+
+    <section id="screen-logbook" class="screen" hidden>
+      <div class="win log-win">
+        <div class="titlebar"><span>LOGBUCH.EXE</span><button id="log-close" class="close" type="button" aria-label="Zurück" title="Zurück">x</button></div>
+        <div class="body">
+          <div class="log-head">
+            <span id="log-count" class="muted"></span>
+            <button id="log-clear" type="button" class="btn-end">Alle löschen</button>
+          </div>
+          <ul id="log-list"></ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="screen-log-game" class="screen" hidden>
+      <p id="log-step" class="status"></p>
+      <div class="boards">
+        <div class="win fit">
+          <div class="titlebar"><span id="log-title-0"></span><i></i></div>
+          <div class="body"><div id="log-board-0" class="board log-board"></div></div>
+        </div>
+        <div class="win fit">
+          <div class="titlebar"><span id="log-title-1"></span><i></i></div>
+          <div class="body"><div id="log-board-1" class="board log-board"></div></div>
+        </div>
+      </div>
+      <div class="win narrow log-controls">
+        <div class="titlebar"><span>PARTIE.EXE</span><button id="log-back" class="close" type="button" aria-label="Zurück zum Logbuch" title="Zurück zum Logbuch">x</button></div>
+        <div class="body">
+          <p id="log-meta" class="muted"></p>
+          <input id="log-slider" type="range" min="0" value="0" aria-label="Zug">
+          <div class="log-buttons">
+            <button id="log-first" type="button" aria-label="Anfang">⏮</button>
+            <button id="log-prev" type="button" aria-label="Zug zurück">◀</button>
+            <button id="log-play" type="button" class="primary">Abspielen</button>
+            <button id="log-next" type="button" aria-label="Zug vor">▶</button>
+            <button id="log-last" type="button" aria-label="Endstand">⏭</button>
+          </div>
+          <p id="log-stats" class="muted"></p>
+        </div>
+      </div>
+      <div class="win narrow log-controls">
+        <div class="titlebar"><span>NOTIZEN.EXE</span><i></i></div>
+        <div class="body">
+          <label><span id="log-alias-label-0">Alias Spieler 1</span> <input id="log-alias-0" maxlength="20" autocomplete="off"></label>
+          <label><span id="log-alias-label-1">Alias Spieler 2</span> <input id="log-alias-1" maxlength="20" autocomplete="off"></label>
+          <label>Kommentar <textarea id="log-comment" maxlength="1000" rows="4" placeholder="Was war besonders an dieser Partie?"></textarea></label>
+          <button id="log-save" type="button" class="primary">Speichern</button>
         </div>
       </div>
     </section>
@@ -170,6 +222,7 @@
   <script src="/shared/rules.js"></script>
   <script src="js/board.js"></script>
   <script src="js/placement.js"></script>
+  <script src="js/logbook.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

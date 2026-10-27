@@ -167,6 +167,18 @@
     return { result: 'sunk', ship: clean(ship), water, allSunk };
   }
 
+  // Logbuch-Partie erneut abspielen: Aufstellung + die ersten `upTo` Züge durch applyShot.
+  // boards[i] = Feld von Spieler i; events: { move, target, res } in Zugreihenfolge.
+  function replay(entry, upTo = entry.moves.length) {
+    const boards = entry.players.map((p) => createBoard(p.ships, entry.size));
+    const events = [];
+    for (const move of entry.moves.slice(0, upTo)) {
+      const target = 1 - move.by;
+      events.push({ move, target, res: applyShot(boards[target], move.x, move.y) });
+    }
+    return { boards, events };
+  }
+
   // Erlaubte Chat-Reaktionen (nur diese Emojis werden vom Server weitergeleitet)
   const REACTIONS = ['\u{1F972}', '\u{1F605}', '\u{1F914}', '\u{1F62E}', '\u{1F44C}', '\u{1F525}'];
 
@@ -178,5 +190,5 @@
     return t || null;
   }
 
-  return { MODES, THEMES, REACTIONS, CHAT_MAX, cleanChat, EXTRA_SHOT_ON_HIT, ASTEROID_GAP, getConfig, tierOf, placements, isShape, inBounds, canPlace, validatePlacement, randomPlacement, createBoard, applyShot };
+  return { MODES, THEMES, REACTIONS, CHAT_MAX, cleanChat, EXTRA_SHOT_ON_HIT, ASTEROID_GAP, getConfig, tierOf, placements, isShape, inBounds, canPlace, validatePlacement, randomPlacement, createBoard, applyShot, replay };
 });
