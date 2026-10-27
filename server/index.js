@@ -33,14 +33,14 @@ function requirePassword(req, res, next) {
 app.use(['/logbuch', '/api/logbook'], requirePassword);
 
 // Logbuch: beendete Partien ansehen und löschen
-app.get('/api/logbook', (req, res) => res.json(Logbook.list()));
-app.delete('/api/logbook/:id', (req, res) => {
-  if (!Logbook.remove(req.params.id)) return res.status(404).json({ error: 'not_found' });
+app.get('/api/logbook', async (req, res) => res.json(await Logbook.list()));
+app.delete('/api/logbook/:id', async (req, res) => {
+  if (!(await Logbook.remove(req.params.id))) return res.status(404).json({ error: 'not_found' });
   res.status(204).end();
 });
-app.delete('/api/logbook', (req, res) => { Logbook.clear(); res.status(204).end(); });
-app.patch('/api/logbook/:id', express.json(), (req, res) => {
-  const e = Logbook.update(req.params.id, req.body || {});
+app.delete('/api/logbook', async (req, res) => { await Logbook.clear(); res.status(204).end(); });
+app.patch('/api/logbook/:id', express.json(), async (req, res) => {
+  const e = await Logbook.update(req.params.id, req.body || {});
   if (!e) return res.status(404).json({ error: 'not_found' });
   res.json(e);
 });
@@ -132,7 +132,7 @@ wss.on('connection', (ws) => {
       for (const p of room.players) send(p, { ...base, by: p === player ? 'you' : 'opponent', yourTurn: room.players[room.turn] === p });
       if (res.allSunk) {
         room.phase = 'over';
-        try { Logbook.add(Logbook.fromRoom(room, player)); } catch (e) { console.error('Logbuch-Eintrag fehlgeschlagen:', e); }
+        Logbook.add(Logbook.fromRoom(room, player)).catch((e) => console.error('Logbuch-Eintrag fehlgeschlagen:', e));
         send(player, { type: 'game_over', winner: 'you', opponentShips: opp.board.ships.map(({ kind, cells }) => ({ kind, cells })) });
         send(opp, { type: 'game_over', winner: 'opponent', opponentShips: player.board.ships.map(({ kind, cells }) => ({ kind, cells })) });
       }
